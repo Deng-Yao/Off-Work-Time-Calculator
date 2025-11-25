@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk  # 引入ttk模块，让UI更好看
+from tkinter import ttk  
 from datetime import datetime, timedelta
 
 def calculate_off_duty_time():
@@ -34,7 +34,7 @@ def calculate_off_duty_time():
             return
 
         # 5. 计算逻辑
-        # 总工作时长为9小时15分钟
+        # 总时长为9小时15分钟
         work_duration = timedelta(hours=9, minutes=15)
         
         # 计划下班时间 = 打卡时间 + 工作时长
