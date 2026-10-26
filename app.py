@@ -1,11 +1,53 @@
 import tkinter as tk
-from tkinter import ttk  
+from tkinter import ttk  # 引入ttk模块，让UI更好看
 from datetime import datetime, timedelta
+
+OVERTIME_OPTIONS = ("0.5", "1", "1.5", "2", "2.5", "3")
+final_off_duty_time = None
+
+
+def reset_calculation(event=None):
+    """打卡时间改变或重新计算时，清除旧结果和加班选项。"""
+    global final_off_duty_time
+    final_off_duty_time = None
+    result_var.set("")
+    overtime_enabled_var.set(False)
+    overtime_hours_var.set("")
+    overtime_selection_frame.pack_forget()
+    overtime_frame.pack_forget()
+
+
+def toggle_overtime():
+    """根据勾选状态显示或隐藏加班时长。"""
+    if overtime_enabled_var.get() and final_off_duty_time is not None:
+        overtime_selection_frame.pack(side=tk.LEFT, padx=(10, 0))
+    else:
+        overtime_hours_var.set("")
+        overtime_selection_frame.pack_forget()
+    calculate_overtime_time()
+
+
+def calculate_overtime_time(event=None):
+    """晚饭的30分钟不计入加班时长。"""
+    if final_off_duty_time is None:
+        return
+
+    overtime_hours = overtime_hours_var.get()
+    if not overtime_enabled_var.get() or overtime_hours not in OVERTIME_OPTIONS:
+        result_var.set(f"计算结果：\n您的下班时间应为 {final_off_duty_time.strftime('%H:%M')} 后")
+        return
+
+    overtime_minutes = int(float(overtime_hours) * 60)
+    actual_off_duty_time = final_off_duty_time + timedelta(minutes=30 + overtime_minutes)
+    result_var.set(f"计算结果：\n实际加班下班时间为 {actual_off_duty_time.strftime('%H:%M')} 后")
+
 
 def calculate_off_duty_time():
     """
     核心计算函数，根据上班时间计算下班时间。
     """
+    global final_off_duty_time
+    reset_calculation()
     try:
         # 1. 获取用户选择的小时和分钟
         hour_str = hour_var.get()
@@ -34,7 +76,7 @@ def calculate_off_duty_time():
             return
 
         # 5. 计算逻辑
-        # 总时长为9小时15分钟
+        # 总工作时长为9小时15分钟
         work_duration = timedelta(hours=9, minutes=15)
         
         # 计划下班时间 = 打卡时间 + 工作时长
@@ -45,6 +87,7 @@ def calculate_off_duty_time():
 
         # 6. 格式化并显示结果
         result_var.set(f"计算结果：\n您的下班时间应为 {final_off_duty_time.strftime('%H:%M')} 后")
+        overtime_frame.pack()
 
     except ValueError:
         result_var.set("错误：请输入有效的时间！")
@@ -55,8 +98,8 @@ def calculate_off_duty_time():
 
 # 创建主窗口
 root = tk.Tk()
-root.title("下班时间计算器 @DENG Yao")
-root.geometry("400x300") # 设置窗口大小
+root.title("CSMAR下班时间计算器 @DENG Yao")
+root.geometry("400x300") # 保留原始窗口大小
 root.resizable(False, False) # 禁止调整窗口大小
 
 # 使用ttk美化样式
@@ -64,6 +107,7 @@ style = ttk.Style()
 style.configure("TLabel", font=("Helvetica", 12))
 style.configure("TButton", font=("Helvetica", 12, "bold"))
 style.configure("TCombobox", font=("Helvetica", 12))
+style.configure("TCheckbutton", font=("Helvetica", 12))
 
 # 创建一个主框架
 main_frame = ttk.Frame(root, padding="20 20 20 20")
@@ -103,6 +147,30 @@ calculate_button.pack(pady=20)
 result_var = tk.StringVar()
 result_label = ttk.Label(main_frame, textvariable=result_var, font=("Helvetica", 14, "bold"), justify=tk.CENTER)
 result_label.pack(pady=10)
+
+# 加班选项：仅在成功计算下班时间后显示
+overtime_enabled_var = tk.BooleanVar(value=False)
+overtime_hours_var = tk.StringVar()
+
+overtime_frame = ttk.Frame(main_frame)
+overtime_checkbox = ttk.Checkbutton(
+    overtime_frame, text="是否加班", variable=overtime_enabled_var,
+    command=toggle_overtime,
+)
+overtime_checkbox.pack(side=tk.LEFT)
+
+overtime_selection_frame = ttk.Frame(overtime_frame)
+overtime_hours_label = ttk.Label(overtime_selection_frame, text="加班时长（小时）：")
+overtime_hours_label.pack(side=tk.LEFT, padx=(0, 5))
+overtime_combobox = ttk.Combobox(
+    overtime_selection_frame, textvariable=overtime_hours_var,
+    values=OVERTIME_OPTIONS, width=5, state="readonly",
+)
+overtime_combobox.pack(side=tk.LEFT)
+overtime_combobox.bind("<<ComboboxSelected>>", calculate_overtime_time)
+
+hour_combobox.bind("<<ComboboxSelected>>", reset_calculation)
+minute_combobox.bind("<<ComboboxSelected>>", reset_calculation)
 
 # 启动主事件循环
 root.mainloop()
